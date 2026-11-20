@@ -62,7 +62,10 @@ function toast(msg, kind = '') {
   const t = document.createElement('div'); t.className = 'toast ' + kind; t.textContent = msg;
   $('#toasts').appendChild(t); setTimeout(() => t.remove(), kind === 'error' ? 7000 : 3500);
 }
-const GEM = `<svg viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#132c52"/><path d="M9 8h14l5 6-12 12L4 14z" fill="#7dd3fc"/><path d="M4 14h24M12 14l4 12 4-12M9 8l3 6 4-6 4 6 3-6" fill="none" stroke="#0b1f3a" stroke-width="1.2"/></svg>`;
+const GEM = `<svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="mk-s" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".5" stop-color="#C3CCD8"/><stop offset="1" stop-color="#8C99AD"/></linearGradient><linearGradient id="mk-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5B8CFF"/><stop offset="1" stop-color="#1D4ED8"/></linearGradient></defs><rect width="40" height="40" rx="11" fill="#0F1E3C"/><rect x=".5" y=".5" width="39" height="39" rx="10.5" fill="none" stroke="#C3CCD8" stroke-opacity=".35"/><path d="M11 13h18l5 6.5L20 33 6 19.5z" fill="url(#mk-s)"/><path d="M15.5 13l-2.5 6.5L20 33l7-13.5L24.5 13z" fill="url(#mk-b)"/><path d="M6 19.5h28M15.5 13L20 19.5 24.5 13M13 19.5L20 33l7-13.5" fill="none" stroke="#0F1E3C" stroke-width=".9" stroke-opacity=".55"/></svg>`;
+const NAV_ICON = { dashboard: 'dashboard', pos: 'pos', orders: 'orders', returns: 'returns', customers: 'customers', inventory: 'inventory', production: 'production', mrp: 'mrp',
+  purchasing: 'purchasing', suppliers: 'suppliers', replenish: 'replenish', financials: 'financials', reports: 'reports', items: 'items', settings: 'settings' };
+const initials = n => String(n || '?').split(/\s+/).map(w => w[0] || '').join('').slice(0, 2).toUpperCase();
 
 /* ---------- database calls ---------- */
 async function rpc(fn, args = {}) {
@@ -131,10 +134,10 @@ function renderShell() {
   const pills = { orders: D.openSO.length, replenish: D.lowCount, purchasing: D.latePO.length };
   $('#app').innerHTML = `<div class="shell">
     <aside class="side">
-      <div class="brand">${GEM}<div>${esc(S.settings.company_name)}<small>ERP System</small></div></div>
+      <div class="brand">${GEM}<div>${esc(S.settings.company_name)}<small>Enterprise suite</small></div></div>
       <nav class="nav">${NAV.map(([g, links]) => `<div class="grp">${g}</div>` + links.map(([k, t]) =>
-        `<a href="#${k}" class="${k === ROUTE ? 'active' : ''}">${t}${pills[k] ? `<span class="pill">${pills[k]}</span>` : ''}</a>`).join('')).join('')}</nav>
-      <div class="who"><b>${esc(ME.name)}</b><span class="live"></span>Live · staff<br><a data-act="auth.signout">Sign out</a></div>
+        `<a href="#${k}" class="${k === ROUTE ? 'active' : ''}" ${k === ROUTE ? 'aria-current="page"' : ''}>${icon(NAV_ICON[k])}<span class="lbl">${t}</span>${pills[k] ? `<span class="pill">${pills[k]}</span>` : ''}</a>`).join('')).join('')}</nav>
+      <div class="who"><span class="avatar">${esc(initials(ME.name))}</span><div class="who-x"><b>${esc(ME.name)}</b><span class="live-row"><span class="live"></span>Live · staff</span></div><a data-act="auth.signout" class="signout" title="Sign out">${icon('signout')}<span class="lbl">Sign out</span></a></div>
     </aside>
     <main class="main" id="main">${PAGES[ROUTE]()}</main></div>`;
 }
@@ -244,10 +247,15 @@ function drawBarcodes(root = document) {
 }
 
 /* ---------- sign in ---------- */
+function loginShowcase() {   // decorative brand panel (pure presentation)
+  const pics = ['NK-ICEY', 'BR-TEN', 'RG-CHMP', 'ER-STUD'].map(sku => prodImg({ sku, name: '' }, 'show')).join('');
+  return `<aside class="showcase" aria-hidden="true"><div class="facets"></div><div class="show-copy"><h2>Fine jewelry for Cougar fans</h2>
+    <p>Handmade in our Provo workshop. One system runs the counter, the bench, the stockroom and the books.</p></div><div class="show-grid">${pics}</div></aside>`;
+}
 function renderLogin(msg = '', kind = '') {
   const u = UI.login ??= { tab: 'in', role: 'customer' };
-  $('#app').innerHTML = `<div class="login"><div class="box">
-    <div class="brand">${GEM}<div>Iced-Out Cougs<small>ERP &amp; Customer Portal</small></div></div>
+  $('#app').innerHTML = `<div class="login">${loginShowcase()}<div class="box">
+    <div class="brand">${GEM}<div>Iced-Out Cougs<small>ERP &amp; customer portal</small></div></div>
     ${tabs('login.tab', [['in', 'Sign in'], ['up', 'Create account']], u.tab)}
     ${msg ? `<div class="note ${kind}">${esc(msg)}</div>` : ''}
     ${u.tab === 'up' ? field('Your name', inp('login.name', u.name, 'autocomplete="name"')) : ''}
@@ -299,7 +307,7 @@ async function boot() {
   if (window.__ERP_TEST_CLIENT__) sb = window.__ERP_TEST_CLIENT__;
   else if (cfg.url && cfg.key && !/YOUR-PROJECT/.test(cfg.url)) sb = window.supabase.createClient(cfg.url, cfg.key);
   if (!sb) {
-    $('#app').innerHTML = `<div class="login"><div class="box"><div class="brand">${GEM}<div>Iced-Out Cougs<small>Setup needed</small></div></div>
+    $('#app').innerHTML = `<div class="login">${loginShowcase()}<div class="box"><div class="brand">${GEM}<div>Iced-Out Cougs<small>Setup needed</small></div></div>
       <p>The app is not connected to a database yet.</p><p>Open <b>js/config.js</b> and paste in your Supabase <b>Project URL</b> and <b>anon public key</b>
       (Supabase → Project Settings → API). Then reload this page.</p><p class="muted small">See README.md for the full setup steps.</p></div></div>`;
     return;

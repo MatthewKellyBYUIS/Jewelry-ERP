@@ -26,7 +26,7 @@ PAGES.inventory = () => {
       ${sel('inv.kind', [['', 'All item types'], ['parent', 'Parent items (made in-house)'], ['component', 'Components'], ['resale', 'Resale items']], u.kind, 'data-render')}
       <label><input type="checkbox" data-model="inv.low" data-render ${u.low ? 'checked' : ''}> Only low, out or backordered</label></div>
     <div class="card flush">${table([
-      { h: 'SKU', c: i => `<span class="nowrap">${esc(i.sku)}</span>` }, { h: 'Item', c: i => `<a data-act="inv.history" data-id="${i.id}"><b>${esc(i.name)}</b></a>` },
+      { h: 'SKU', c: i => `<span class="nowrap">${esc(i.sku)}</span>` }, { h: 'Item', c: i => itemCell(i, `<a data-act="inv.history" data-id="${i.id}"><b>${esc(i.name)}</b></a>`) },
       { h: 'Type', c: i => kindLabel(i) }, { h: 'ABC', c: i => badge(D.stat[i.id].abc, D.stat[i.id].abc === 'A' ? 'info' : '') },
       ...S.locations.map(l => ({ h: esc(l.code), cls: 'num', c: i => qty(D.qtyAt(i.id, l.id)) })),
       { h: 'On hand', cls: 'num', c: i => `<b>${qty(D.onHand(i.id))}</b>` },
@@ -108,7 +108,7 @@ PAGES.production = () => {
   const u = UI.prod ??= { tab: 'orders', status: 'open', r: { range: '90' } };
   const actBtn = w => w.status === 'Planned' ? `<button class="btn sm primary" data-act="prod.issue" data-id="${w.id}">Issue components</button> <button class="btn sm" data-act="prod.cancel" data-id="${w.id}">Cancel</button>`
     : w.status === 'In Process' ? `<button class="btn sm primary" data-act="prod.complete" data-id="${w.id}">Complete</button>` : '';
-  const cols = [{ h: 'Order', c: w => `<a data-act="prod.view" data-id="${w.id}"><b>${w.number}</b></a>` }, { h: 'Item', c: w => esc(D.item[w.item_id].name) }, { h: 'Location', c: w => esc(D.loc[w.location_id].code) },
+  const cols = [{ h: 'Order', c: w => `<a data-act="prod.view" data-id="${w.id}"><b>${w.number}</b></a>` }, { h: 'Item', c: w => itemCell(D.item[w.item_id], esc(D.item[w.item_id].name)) }, { h: 'Location', c: w => esc(D.loc[w.location_id].code) },
     { h: 'Qty', cls: 'num', c: w => qty(w.qty_planned) }, { h: 'Status', c: w => badge(w.status, woTone(w.status)) }, { h: 'Due', c: w => fdate(w.due_date) + (['Planned', 'In Process'].includes(w.status) && w.due_date < S.today ? ' ' + badge('late', 'bad') : '') },
     { h: 'Started', c: w => ftime(w.started_at) }, { h: 'Finished', c: w => ftime(w.finished_at) },
     { h: 'Good', cls: 'num', c: w => w.qty_good == null ? '' : qty(w.qty_good) }, { h: 'Scrap', cls: 'num', c: w => w.qty_scrapped == null ? '' : qty(w.qty_scrapped) }, { h: 'Rework', cls: 'num', c: w => w.qty_reworked == null ? '' : qty(w.qty_reworked) },
@@ -203,11 +203,11 @@ PAGES.mrp = () => {
     ${N(u.surge) ? `<div class="note warn">What-if mode: gross requirements are inflated by ${N(u.surge)}%. Set the slider back to 0% to plan from actual confirmed orders.</div>` : ''}
     <div>
       <div class="card flush"><div class="cardhead"><h2>Suggested purchase orders</h2><button class="btn sm primary" data-act="mrp.createpos" ${buys.some(on) ? '' : 'disabled'}>Create draft POs for checked</button></div>
-        ${table([{ h: '', c: p => `<input type="checkbox" data-model="mrp.sel.${key(p)}" data-render ${on(p) ? 'checked' : ''}>` }, { h: 'Component', c: p => esc(p.item.name) }, { h: 'Supplier', c: p => esc(D.sup[p.item.supplier_id]?.name || '—') },
+        ${table([{ h: '', c: p => `<input type="checkbox" data-model="mrp.sel.${key(p)}" data-render ${on(p) ? 'checked' : ''}>` }, { h: 'Component', c: p => itemCell(p.item, esc(p.item.name)) }, { h: 'Supplier', c: p => esc(D.sup[p.item.supplier_id]?.name || '—') },
           { h: 'Order qty', cls: 'num', c: p => `<b>${qty(p.qty)}</b>` }, { h: 'Needed by', c: p => `wk ${p.week} · ${fshort(p.need)}` }, { h: 'Lead time', cls: 'num', c: p => qty(p.item.lead_time_days) + ' d' },
           { h: 'Order by', c: p => p.late ? `${fshort(p.by)} ${badge('order now', 'bad')}` : `<b>${fshort(p.by)}</b>` }], buys, { empty: 'No purchases needed: on-hand stock and open purchase orders cover every requirement.' })}</div>
       <div class="card flush"><div class="cardhead"><h2>${m.direct ? 'Builds implied by confirmed orders' : 'Suggested production orders'}</h2>${m.direct ? '<span class="muted small">Assignment method: every ordered unit is planned as a build (finished stock is not used). Switch to standard netting to see only the builds still needed.</span>' : ''}</div>
-        ${table([{ h: 'Parent item', c: p => esc(p.item.name) }, { h: 'Build qty', cls: 'num', c: p => `<b>${qty(p.qty)}</b>` }, { h: 'Needed by', c: p => `wk ${p.week} · ${fshort(p.need)}` },
+        ${table([{ h: 'Parent item', c: p => itemCell(p.item, esc(p.item.name)) }, { h: 'Build qty', cls: 'num', c: p => `<b>${qty(p.qty)}</b>` }, { h: 'Needed by', c: p => `wk ${p.week} · ${fshort(p.need)}` },
           { h: 'Start by', c: p => p.late ? `${fshort(p.by)} ${badge('start now', 'bad')}` : `<b>${fshort(p.by)}</b>` },
           { h: '', c: p => `<button class="btn sm" data-act="prod.new" data-item="${p.item.id}" data-qty="${p.qty}" data-due="${p.need < S.today ? S.today : p.need}">Create order</button>` }], makes, { empty: 'No builds needed: finished stock and open production orders cover all confirmed orders.' })}</div>
     </div>
@@ -377,7 +377,7 @@ PAGES.replenish = () => {
         { h: 'Status', c: i => D.stat[i.id].low ? badge('Order now', 'bad') : badge('OK', 'ok') }, { h: 'Suggested qty', cls: 'num', c: i => D.stat[i.id].low ? `<b>${qty(sug(i))}</b>` : `<span class="muted">${qty(sug(i))}</span>` },
         { h: 'Order by', c: i => D.stat[i.id].low ? `<b>${fshort(D.stat[i.id].orderBy || S.today)}</b>` : D.stat[i.id].orderBy ? `<span class="muted">${fshort(D.stat[i.id].orderBy)}</span>` : '' }], items)}</div>
       <p class="muted small">Position = on hand + on order. An item is flagged when its position is at or below the reorder point in use. Suggested quantity is the EOQ rounded to the supplier lot size. Order-by = projected run-out date (on hand ÷ d) minus the lead time.</p>
-      <div class="card flush"><h2>Items we make: production triggers</h2>${table([{ h: 'Parent item', c: i => esc(i.name) }, { h: 'Avg daily sales', cls: 'num', c: i => num(D.stat[i.id].d, 2) }, { h: 'Build lead time', cls: 'num', c: i => i.lead_time_days + ' d' },
+      <div class="card flush"><h2>Items we make: production triggers</h2>${table([{ h: 'Parent item', c: i => itemCell(i, esc(i.name)) }, { h: 'Avg daily sales', cls: 'num', c: i => num(D.stat[i.id].d, 2) }, { h: 'Build lead time', cls: 'num', c: i => i.lead_time_days + ' d' },
         { h: 'Calculated ROP', cls: 'num', c: i => qty(D.stat[i.id].ropCalc) }, { h: 'ROP in use', cls: 'num', c: i => inp(`rep.rop.${i.id}`, u.rop[i.id] ?? i.reorder_point, 'type="number" min="0" step="1" class="q"') },
         { h: 'On hand', cls: 'num', c: i => qty(D.stat[i.id].onHand) }, { h: 'In production', cls: 'num', c: i => qty(D.stat[i.id].incoming) }, { h: 'Status', c: i => D.stat[i.id].low ? badge('Build now', 'bad') : badge('OK', 'ok') },
         { h: '', c: i => `<button class="btn sm" data-act="prod.new" data-item="${i.id}" data-qty="${Math.max(N(i.lot_qty), Math.ceil(D.stat[i.id].d * 7), 1)}">Create production order</button>` }], made)}</div>`;

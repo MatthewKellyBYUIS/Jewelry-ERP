@@ -90,13 +90,13 @@ PAGES.pos = () => {
       ${scanBar('Scan a barcode (USB scanner or type the number and press Enter)')}
       <div class="filters">${inp('pos.search', u.search, 'placeholder="Search items…" data-render="live" style="flex:1"')}</div>
       <div class="tiles">${items.map(i => { const have = D.qtyAt(i.id, +u.loc), mto = have <= 0 && D.canBuild(i.id, u.loc, 1);
-        return `<button class="tile ${have <= 0 && !mto ? 'out' : ''}" data-act="pos.add" data-id="${i.id}"><b>${esc(i.name)}</b><div class="p">${money(i.price)}</div>
+        return `<button class="tile ${have <= 0 && !mto ? 'out' : ''}" data-act="pos.add" data-id="${i.id}"><span class="tile-img">${prodImg(i)}</span><b>${esc(i.name)}</b><div class="p">${money(i.price)}</div>
           <div class="s">${have > 0 ? qty(have) + ' in stock here' : mto ? 'Made to order' : 'Out of stock here'}</div></button>`; }).join('') || '<div class="empty">No items match.</div>'}</div>
     </div>
     <div class="card cart">
       <h2>Current sale</h2>
       ${u.cart.length ? u.cart.map((c, i) => { const it = D.item[c.id], have = D.qtyAt(c.id, +u.loc), short = N(c.qty) > have;
-        return `<div class="line"><div><b>${esc(it.name)}</b> ${short ? (D.canBuild(c.id, u.loc, N(c.qty) - have) ? badge('assemble to order', 'info') : badge(`only ${qty(have)} here`, 'bad')) : ''}<div class="ctl">Qty ${inp(`pos.cart.${i}.qty`, c.qty, 'type="number" min="1" step="1" data-render')} Disc % ${inp(`pos.cart.${i}.disc`, c.disc, 'type="number" min="0" max="100" data-render')}</div></div>
+        return `<div class="line has-img">${prodImg(it, 'thumb')}<div><b>${esc(it.name)}</b> ${short ? (D.canBuild(c.id, u.loc, N(c.qty) - have) ? badge('assemble to order', 'info') : badge(`only ${qty(have)} here`, 'bad')) : ''}<div class="ctl">Qty ${inp(`pos.cart.${i}.qty`, c.qty, 'type="number" min="1" step="1" data-render')} Disc % ${inp(`pos.cart.${i}.disc`, c.disc, 'type="number" min="0" max="100" data-render')}</div></div>
           <div class="right"><b>${money(N(c.qty) * N(it.price) * (1 - N(c.disc) / 100))}</b><br><a class="small" data-act="pos.remove" data-i="${i}">remove</a></div></div>`; }).join('')
         : '<div class="empty">Scan or tap an item to begin.</div>'}
       <div class="frow" style="margin-top:12px">${field('Customer (optional)', sel('pos.cust', [['', 'Walk-in customer'], ...S.customers.map(c => [c.id, c.name])], u.cust))}
@@ -305,13 +305,14 @@ PAGES.portal = () => {
     return (here > 0 ? `<span class="badge ok">${qty(here)} available at ${esc(loc.name)}</span>` : `<span class="badge warn">${i.made_in_house ? 'Made to order' : 'Backordered'} · est. ready ${fdate(i.eta || S.today)}</span>`) +
       (other.length ? `<div class="muted small" style="margin-top:3px">Also at ${other.map(l => `${esc(l.name)} (${qty(i.stock[l.id])})`).join(', ')}</div>` : ''); };
   const shop = `<div class="shop"><div>
-      <div class="filters">${field('Pick up at', sel('portal.loc', S.locations.map(l => [l.id, l.name]), u.loc, 'data-render'))}${field('Category', sel('portal.cat', [['', 'All jewelry'], ...cats], u.cat, 'data-render'))}</div>
-      <p class="muted" style="margin-top:0">${esc(loc.name)} · ${esc(loc.address || '')}. Availability is live from our inventory system.</p>
-      <div class="prods">${items.map(i => `<div class="prod"><div class="gem">${esc(i.category.toUpperCase())}</div><b>${esc(i.name)}</b><div class="muted small">${esc(i.description || '')}</div>
+      <div class="filters">${field('Pick up at', sel('portal.loc', S.locations.map(l => [l.id, l.name]), u.loc, 'data-render'))}</div>
+      <nav class="catnav" aria-label="Categories">${[['', 'All jewelry'], ...cats.map(c => [c, c])].map(([v, t]) => `<button class="chip ${String(u.cat || '') === v ? 'on' : ''}" data-act="ui.set" data-k="portal.cat" data-v="${esc(v)}" ${String(u.cat || '') === v ? 'aria-pressed="true"' : 'aria-pressed="false"'}>${esc(t)}</button>`).join('')}</nav>
+      <p class="muted shop-loc">${icon('pin')}${esc(loc.name)}, ${esc(loc.address || '')}. Availability is live from our inventory system.</p>
+      <div class="prods">${items.map(i => `<div class="prod"><a class="prod-img" data-act="portal.detail" data-id="${i.id}" title="View details">${prodImg(i)}</a><span class="prod-cat">${esc(i.category)}</span><a class="prod-name" data-act="portal.detail" data-id="${i.id}"><b>${esc(i.name)}</b></a><div class="muted small prod-desc">${esc(i.description || '')}</div>
         <div class="p">${money(i.price)}</div><div>${avail(i)}</div>
         <div class="add">${inp(`portal.q.${i.id}`, u.q[i.id] ?? 1, 'type="number" min="1" step="1"')}<button class="btn primary" data-act="portal.add" data-id="${i.id}" style="flex:1;justify-content:center">Add to order</button></div></div>`).join('')}</div></div>
     <div class="card cart"><h2>Your pickup order</h2>
-      ${u.cart.length ? u.cart.map((c, i) => `<div class="line"><div><b>${esc(byId[c.id].name)}</b><div class="ctl">Qty ${inp(`portal.cart.${i}.qty`, c.qty, 'type="number" min="1" step="1" data-render')}</div></div>
+      ${u.cart.length ? u.cart.map((c, i) => `<div class="line has-img">${prodImg(byId[c.id], 'thumb')}<div><b>${esc(byId[c.id].name)}</b><div class="ctl">Qty ${inp(`portal.cart.${i}.qty`, c.qty, 'type="number" min="1" step="1" data-render')}</div></div>
         <div class="right"><b>${money(N(byId[c.id].price) * N(c.qty))}</b><br><a class="small" data-act="portal.remove" data-i="${i}">remove</a></div></div>`).join('') : '<div class="empty">Your order is empty.</div>'}
       ${waits.length ? `<div class="note warn" style="margin-top:10px">${waits.map(w => `<b>${esc(w.it.name)}</b> is not fully in stock at ${esc(loc.name)}; estimated ready ${fdate(w.eta)}.`).join('<br>')}</div>` : ''}
       <div style="margin-top:10px">${field('Pickup location', `<input value="${esc(loc.name)}" disabled>`)}${field('Pickup date', inp('portal.date', u.date || (ready && ready > S.today ? ready : S.today), `type="date" min="${S.today}"`))}${field('Note to the store (optional)', inp('portal.notes', u.notes))}</div>
@@ -321,12 +322,24 @@ PAGES.portal = () => {
       { h: 'Items', c: o => o.lines.map(l => `${qty(l.qty)} × ${esc(l.name)}`).join('<br>') }, { h: 'Total before tax', cls: 'num', c: o => money(soValue(o)) },
       { h: 'Status', c: o => badge({ 'Order Placed': 'Order placed', Fulfilled: 'Ready for pickup', Closed: 'Picked up', Cancelled: 'Cancelled' }[o.status], soTone(o.status)) },
       { h: '', c: o => o.status === 'Order Placed' ? `<button class="btn sm danger" data-act="portal.cancel" data-id="${o.id}">Cancel</button>` : '' }], S.orders, { empty: 'You have not placed any orders yet.' })}</div>`;
+  const hero = u.tab === 'shop' ? `<section class="hero"><div class="facets"></div><div class="hero-copy"><h1>Fine jewelry for Cougar fans</h1><p>Handmade in Provo. Reserve online and pick up at ${esc(loc.name)}.</p></div>
+      <div class="hero-pics" aria-hidden="true">${['NK-PAW', 'BR-TEN', 'ER-STUD'].map(sku => prodImg({ sku, name: '' }, 'show')).join('')}</div></section>` : '';
   return `<div class="portal"><header class="top"><div class="brand">${GEM}<div>${esc(S.company)}<small>Customer portal</small></div></div>
-      <div>${esc(S.me.name)} · <a data-act="auth.signout">Sign out</a></div></header>
-    <div class="wrap">${tabs('portal.tab', [['shop', 'Shop & availability'], ['orders', `My orders (${S.orders.length})`]], u.tab)}${u.tab === 'shop' ? shop : orders}</div></div>`;
+      <div class="top-user">${icon('user')}<span>${esc(S.me.name)}</span><a data-act="auth.signout">${icon('signout')}Sign out</a></div></header>
+    ${hero}<div class="wrap">${tabs('portal.tab', [['shop', 'Shop & availability'], ['orders', `My orders (${S.orders.length})`]], u.tab)}${u.tab === 'shop' ? shop : orders}</div></div>`;
 };
 ACT['portal.add'] = d => { const u = UI.portal, id = +d.id, q = Math.max(1, N(u.q[id] ?? 1)); const line = u.cart.find(c => c.id === id);
   if (line) line.qty = N(line.qty) + q; else u.cart.push({ id, qty: q }); toast('Added to your order', 'ok'); render(); };
+// product details (presentation only: uses the same quantity field and the existing Add to order action)
+ACT['portal.detail'] = d => {
+  const id = +d.id;
+  modal(() => { const i = S.items.find(x => x.id === id); if (!i) return null; const u = UI.portal;
+    return { title: esc(i.name), body: `<div class="pdetail"><div class="pdetail-img">${prodImg(i)}</div><div class="pdetail-x"><span class="prod-cat">${esc(i.category)}</span>
+      <div class="pdetail-price">${money(i.price)}</div><p>${esc(i.description || '')}</p><h3>Availability by location</h3>
+      <ul class="availlist">${S.locations.map(l => `<li><span>${icon('pin')}${esc(l.name)}</span>${N(i.stock[l.id]) > 0 ? badge(qty(i.stock[l.id]) + ' available', 'ok') : badge(i.made_in_house ? 'Made to order' : 'Backordered', 'warn')}</li>`).join('')}</ul>
+      ${S.locations.every(l => N(i.stock[l.id]) <= 0) ? `<p class="muted small">Estimated ready ${fdate(i.eta || S.today)}.</p>` : ''}
+      <div class="add">${inp(`portal.q.${i.id}`, u.q[i.id] ?? 1, 'type="number" min="1" step="1"')}<button class="btn primary" data-act="portal.add" data-id="${i.id}">${icon('bag')}Add to order</button></div></div></div>` }; }, { size: 'wide' });
+};
 ACT['portal.remove'] = d => { UI.portal.cart.splice(+d.i, 1); render(); };
 ACT['portal.place'] = async () => {
   const u = UI.portal, date = $('[data-model="portal.date"]')?.value || S.today;
